@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web 2 - Landing Page Minh Họa Virtual Host | Domain 2</title>
+    <style>
+        :root {
+            --primary: #059669;
+            --primary-hover: #047857;
+            --bg-body: #f0fdf4;
+            --card-bg: #ffffff;
+            --text-main: #064e3b;
+            --text-muted: #4b5563;
+            --border: #d1fae5;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: #1f2937;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2.5rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            padding: 3rem 2rem;
+            border-radius: 16px;
+            margin-bottom: 2rem;
+            box-shadow: 0 10px 15px -3px rgba(16, 185, 129, 0.2);
+            text-align: center;
+        }
+
+        .hero h1 {
+            font-size: 2.2rem;
+            margin-bottom: 0.75rem;
+            font-weight: 800;
+        }
+
+        .hero p {
+            font-size: 1.1rem;
+            color: #ecfdf5;
+            max-width: 650px;
+            margin: 0 auto;
+            line-height: 1.6;
+        }
+
+        .badge-domain {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(4px);
+            padding: 0.35rem 1.2rem;
+            border-radius: 9999px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            margin-top: 1.25rem;
+            letter-spacing: 0.05em;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 2rem;
+            border: 1px solid var(--border);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px -1px rgba(0, 0, 0, 0.08);
+        }
+
+        .card h2 {
+            font-size: 1.3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card p {
+            color: var(--text-muted);
+            line-height: 1.7;
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+
+        .code-box {
+            background-color: #1e293b;
+            color: #f1f5f9;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            overflow-x: auto;
+        }
+
+        .check-list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .check-list li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 0.95rem;
+            color: #374151;
+        }
+
+        .check-list li span.icon {
+            color: var(--primary);
+            font-weight: bold;
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            color: #6b7280;
+            font-size: 0.85rem;
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="hero">
+        <span class="badge-domain">🌐 SERVER VIRTUAL HOST 2: domain2.local</span>
+        <h1>Chào Mừng Đến Với Web 2</h1>
+        <p>
+            Trang Landing Page độc lập chứng minh Nginx phân biệt thành công nhiều tên miền khác nhau trên cùng một cổng 80 (Name-based Virtual Hosting).
+        </p>
+    </div>
+
+    <div class="grid-2">
+        <div class="card">
+            <h2>🎯 Mục Đích Triển Khai</h2>
+            <p>
+                Đây là website thứ hai được phục vụ bởi Nginx container. Mặc dù cả hai website đều lắng nghe trên cùng cổng <b>80</b> và chia sẻ chung một địa chỉ IP, Nginx đã định tuyến chuẩn xác dựa vào tiêu đề <code>Host</code> trong gói tin HTTP request.
+            </p>
+            <ul class="check-list">
+                <li><span class="icon">✓</span> <b>Web 1:</b> <code>domain1.local</code> &rarr; Quản lý sinh viên & Proxy API</li>
+                <li><span class="icon">✓</span> <b>Web 2:</b> <code>domain2.local</code> &rarr; Landing Page thông tin</li>
+                <li><span class="icon">✓</span> <b>Bảo mật & Tách biệt:</b> Thư mục mã nguồn và access log riêng biệt</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h2>⚙️ Cấu Hình Nginx Tương Ứng</h2>
+            <p>Khối <code>server</code> được định nghĩa trong <code>nginx/conf.d/default.conf</code>:</p>
+            <div class="code-box">
+server {
+    listen 80;
+    server_name domain2.local;
+    root /usr/share/nginx/html/web2;
+    index index.html;
+}
+            </div>
+            <p style="margin-top: 1rem; font-size: 0.85rem;">
+                👉 Khi truy vấn tới <code>http://domain2.local</code>, Nginx trả về tài nguyên trong <code>/web2</code> mà không bị xung đột với <code>/web1</code>.
+            </p>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🛠️ Hướng Dẫn Thử Nghiệm Domain Ảo</h2>
+        <p>
+            Để kiểm tra tính năng Virtual Host trên máy cá nhân, thêm dòng sau vào file hosts:
+        </p>
+        <div class="code-box">
+# Trên Windows: C:\Windows\System32\drivers\etc\hosts
+# Trên Linux/macOS: /etc/hosts
+127.0.0.1  domain1.local
+127.0.0.1  domain2.local
+        </div>
+        <p style="margin-top: 0.75rem; font-size: 0.85rem;">
+            Sau đó truy cập trình duyệt tại <b>http://domain1.local</b> và <b>http://domain2.local</b> để kiểm chứng hai giao diện khác nhau hoàn toàn.
+        </p>
+    </div>
+
+    <footer>
+        <p>BTVN Bộ môn Lập Trình Web - Docker Compose Architecture (Nginx, Node-RED, MariaDB, phpMyAdmin, Cloudflared)</p>
+    </footer>
+</div>
+
+</body>
+</html>

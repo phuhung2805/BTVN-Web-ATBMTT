@@ -1,0 +1,82 @@
+services:
+  # 1. Dịch vụ Nginx Reverse Proxy & Static Web Server
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_server
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./web1:/usr/share/nginx/html/web1:ro
+      - ./web2:/usr/share/nginx/html/web2:ro
+    depends_on:
+      - nodered
+    networks:
+      - web-net
+
+  # 2. Dịch vụ Node-RED (API backend & Workflow)
+  nodered:
+    image: nodered/node-red:latest
+    container_name: nodered_app
+    restart: unless-stopped
+    ports:
+      - "1880:1880"
+    volumes:
+      - nodered_data:/data
+    networks:
+      - web-net
+
+  # 3. Dịch vụ Cơ sở dữ liệu MariaDB
+  mariadb:
+    image: mariadb:11.4
+    container_name: mariadb_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password_123
+      MYSQL_DATABASE: web_db
+      MYSQL_USER: web_user
+      MYSQL_PASSWORD: web_password_123
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - web-net
+
+  # 4. Dịch vụ phpMyAdmin Quản trị Database
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin_ui
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mariadb
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: root_password_123
+      UPLOAD_LIMIT: 64M
+    ports:
+      - "8080:80"
+    depends_on:
+      - mariadb
+    networks:
+      - web-net
+
+  # 5. Dịch vụ Cloudflare Tunnel kết nối Internet công cộng an toàn
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    restart: unless-stopped
+    command: tunnel run --token YOUR_TUNNEL_TOKEN
+    networks:
+      - web-net
+
+# Quản lý Volume dữ liệu bền vững (Persistent Data)
+volumes:
+  mariadb_data:
+    driver: local
+  nodered_data:
+    driver: local
+
+# Bridge Network chung cho phép các container phân giải hostname của nhau
+networks:
+  web-net:
+    driver: bridge

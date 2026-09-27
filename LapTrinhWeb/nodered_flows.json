@@ -1,0 +1,57 @@
+[
+    {
+        "id": "tab_btvn_web_api",
+        "type": "tab",
+        "label": "BTVN API Service",
+        "disabled": false,
+        "info": "Flow cung cấp API /api/tacke phục vụ cho bài tập lớn Web và Reverse Proxy Nginx"
+    },
+    {
+        "id": "node_http_in_tacke",
+        "type": "http in",
+        "z": "tab_btvn_web_api",
+        "name": "GET /api/tacke",
+        "url": "/api/tacke",
+        "method": "get",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 160,
+        "y": 160,
+        "wires": [
+            [
+                "node_func_mock_dssv"
+            ]
+        ]
+    },
+    {
+        "id": "node_func_mock_dssv",
+        "type": "function",
+        "z": "tab_btvn_web_api",
+        "name": "Trả về dữ liệu mẫu DSSV",
+        "func": "// Thiết lập Content-Type trả về chuẩn JSON\nmsg.headers = {\n    \"Content-Type\": \"application/json; charset=utf-8\"\n};\nmsg.statusCode = 200;\n\n// Dữ liệu theo đúng yêu cầu đề bài\nmsg.payload = {\n    \"ok\": 1,\n    \"msg\": \"thành công\",\n    \"dssv\": [\n        {\n            \"name\": \"Cốp\",\n            \"money\": 123\n        },\n        {\n            \"name\": \"David\",\n            \"money\": 456\n        }\n    ]\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 160,
+        "wires": [
+            [
+                "node_http_response_tacke"
+            ]
+        ]
+    },
+    {
+        "id": "node_http_response_tacke",
+        "type": "http response",
+        "z": "tab_btvn_web_api",
+        "name": "HTTP Response 200",
+        "statusCode": "200",
+        "headers": {},
+        "x": 680,
+        "y": 160,
+        "wires": []
+    }
+]

@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web 1 - Hệ Thống Quản Lý Sinh Viên | Domain 1</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-body: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 2rem 1rem;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1e40af, #3b82f6);
+            color: white;
+            padding: 2rem;
+            border-radius: 12px;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #dbeafe;
+            font-size: 0.95rem;
+        }
+
+        .badge-domain {
+            display: inline-block;
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            margin-top: 0.75rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 1.75rem;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--border);
+            margin-bottom: 1.5rem;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.6rem 1.2rem;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            padding: 0.3rem 0.8rem;
+            border-radius: 9999px;
+        }
+
+        .status-idle { background-color: #f1f5f9; color: #475569; }
+        .status-loading { background-color: #fef3c7; color: #b45309; }
+        .status-success { background-color: #d1fae5; color: #065f46; }
+        .status-error { background-color: #fee2e2; color: #991b1b; }
+
+        .table-responsive {
+            overflow-x: auto;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 0.9rem 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background-color: #f8fafc;
+        }
+
+        .student-avatar {
+            width: 34px;
+            height: 34px;
+            background-color: #e0e7ff;
+            color: #4338ca;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-right: 0.75rem;
+        }
+
+        .student-name-col {
+            display: flex;
+            align-items: center;
+        }
+
+        .money-tag {
+            font-weight: 600;
+            color: #059669;
+            background-color: #ecfdf5;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            display: inline-block;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem 1rem;
+            color: var(--text-muted);
+        }
+
+        .json-preview {
+            background-color: #0f172a;
+            color: #38bdf8;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: Consolas, Monaco, monospace;
+            font-size: 0.85rem;
+            overflow-x: auto;
+            margin-top: 1rem;
+            max-height: 250px;
+        }
+
+        .api-info-box {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-top: 1rem;
+            background-color: #f8fafc;
+            border-left: 4px solid var(--primary);
+            padding: 0.75rem 1rem;
+            border-radius: 0 6px 6px 0;
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            padding-top: 2rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Trang Chủ Web 1 - Lập Trình Web</h1>
+        <p>Hệ thống gọi API phân tán qua Nginx Reverse Proxy & Node-RED Backend</p>
+        <span class="badge-domain">Virtual Host: domain1.local (hoặc localhost)</span>
+    </header>
+
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Danh Sách Sinh Viên (Dữ Liệu Từ Node-RED API)</h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.25rem;">
+                    Endpoint: <code>/api/tacke</code> &rarr; Reverse Proxy tới <code>http://nodered:1880/api/tacke</code>
+                </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span id="apiStatus" class="status-badge status-idle">Chờ gọi API</span>
+                <button id="fetchBtn" class="btn" onclick="loadStudentData()">
+                    <span id="btnIcon">🔄</span>
+                    <span id="btnText">Tải Dữ Liệu</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 70px;">STT</th>
+                        <th>Họ Và Tên Sinh Viên</th>
+                        <th style="width: 200px;">Số Tiền / Điểm Thưởng</th>
+                        <th style="width: 140px; text-align: center;">Trạng Thái</th>
+                    </tr>
+                </thead>
+                <tbody id="studentTableBody">
+                    <tr>
+                        <td colspan="4" class="empty-state">
+                            Nhấn nút <b>"Tải Dữ Liệu"</b> để thực hiện gọi API qua Reverse Proxy.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="api-info-box">
+            <b>Cơ chế hoạt động:</b> Trình duyệt gửi HTTP GET request đến <code>/api/tacke</code> cùng origin. Nginx tiếp nhận, đóng vai trò <b>Reverse Proxy</b> điều phối luồng tới container <code>nodered:1880/api/tacke</code> trên mạng bridge nội bộ Docker, kèm tiêu đề CORS tiêu chuẩn.
+        </div>
+
+        <details style="margin-top: 1rem; cursor: pointer;">
+            <summary style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">
+                🔍 Xem phản hồi JSON thô từ Node-RED (Raw Response)
+            </summary>
+            <pre id="rawJsonResponse" class="json-preview">// JSON phản hồi sẽ hiển thị tại đây sau khi fetch...</pre>
+        </details>
+    </div>
+
+    <footer>
+        <p>BTVN Bộ môn Lập Trình Web - Docker Compose Architecture (Nginx, Node-RED, MariaDB, phpMyAdmin, Cloudflared)</p>
+    </footer>
+</div>
+
+<script>
+    async function loadStudentData() {
+        const statusEl = document.getElementById('apiStatus');
+        const tableBody = document.getElementById('studentTableBody');
+        const rawJsonEl = document.getElementById('rawJsonResponse');
+        const fetchBtn = document.getElementById('fetchBtn');
+        const btnText = document.getElementById('btnText');
+
+        // Trạng thái đang tải
+        fetchBtn.disabled = true;
+        btnText.textContent = "Đang tải...";
+        statusEl.className = "status-badge status-loading";
+        statusEl.textContent = "Đang kết nối API...";
+
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="4" class="empty-state">
+                    Đang gửi yêu cầu tới <code>/api/tacke</code>...
+                </td>
+            </tr>
+        `;
+
+        try {
+            // Sử dụng Fetch API gọi tới endpoint /api/tacke
+            const response = await fetch('/api/tacke', {
+                method: 'GET',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            rawJsonEl.textContent = JSON.stringify(data, null, 2);
+
+            // Kiểm tra cấu trúc dữ liệu theo yêu cầu: { ok: 1, msg: "...", dssv: [...] }
+            if (data && Array.isArray(data.dssv)) {
+                if (data.dssv.length === 0) {
+                    tableBody.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="empty-state">Danh sách sinh viên rỗng.</td>
+                        </tr>
+                    `;
+                } else {
+                    let rowsHtml = '';
+                    data.dssv.forEach((sv, index) => {
+                        const avatarLetter = (sv.name || '?').charAt(0).toUpperCase();
+                        const formattedMoney = new Intl.NumberFormat('vi-VN').format(sv.money || 0) + ' VNĐ';
+
+                        rowsHtml += `
+                            <tr>
+                                <td><strong>#${index + 1}</strong></td>
+                                <td>
+                                    <div class="student-name-col">
+                                        <div class="student-avatar">${avatarLetter}</div>
+                                        <div>
+                                            <div style="font-weight: 600;">${escapeHtml(sv.name || 'Không có tên')}</div>
+                                            <div style="font-size: 0.8rem; color: var(--text-muted);">Mã SV: SV${1000 + index}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="money-tag">${formattedMoney}</span>
+                                </td>
+                                <td style="text-align: center;">
+                                    <span style="color: var(--success); font-size: 0.85rem; font-weight: 600;">● Đã xác nhận</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tableBody.innerHTML = rowsHtml;
+                }
+
+                statusEl.className = "status-badge status-success";
+                statusEl.textContent = `Thành công (${data.msg || 'OK'})`;
+            } else {
+                throw new Error('Dữ liệu trả về không đúng định dạng chứa mảng "dssv"');
+            }
+
+        } catch (error) {
+            console.error('Fetch error:', error);
+            statusEl.className = "status-badge status-error";
+            statusEl.textContent = "Lỗi kết nối API";
+            rawJsonEl.textContent = JSON.stringify({ error: error.message }, null, 2);
+
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="empty-state" style="color: var(--danger);">
+                        <p style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ Không thể tải dữ liệu từ <code>/api/tacke</code></p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(error.message)}</p>
+                        <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #475569;">
+                            Gợi ý: Kiểm tra xem container <code>nodered</code> đã khởi động và import file <code>nodered_flows.json</code> chưa.
+                        </p>
+                    </td>
+                </tr>
+            `;
+        } finally {
+            fetchBtn.disabled = false;
+            btnText.textContent = "Tải Dữ Liệu";
+        }
+    }
+
+    // Hàm tiện ích chống XSS
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Tự động tải dữ liệu khi trang web sẵn sàng
+    window.addEventListener('DOMContentLoaded', () => {
+        loadStudentData();
+    });
+</script>
+
+</body>
+</html>
