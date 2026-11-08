@@ -65,7 +65,7 @@ services:
     image: cloudflare/cloudflared:latest
     container_name: cloudflared_tunnel
     restart: unless-stopped
-    command: tunnel run --token YOUR_TUNNEL_TOKEN
+    command: "tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}"
     networks:
       - web-net
 
