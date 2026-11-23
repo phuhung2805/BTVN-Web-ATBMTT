@@ -225,6 +225,49 @@
             border-radius: 0 6px 6px 0;
         }
 
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+        }
+
+        .filters label {
+            display: flex;
+            flex-direction: column;
+            gap: 0.3rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+
+        .filters input, .filters select {
+            padding: 0.5rem 0.6rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .stat {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 0.8rem 1rem;
+        }
+
+        .stat .label { font-size: 0.78rem; color: var(--text-muted); }
+        .stat .value { font-size: 1.15rem; font-weight: 700; margin-top: 0.2rem; font-variant-numeric: tabular-nums; }
+
+        .pos { color: #059669; font-weight: 600; }
+        .neg { color: var(--danger); font-weight: 600; }
+
         footer {
             margin-top: auto;
             text-align: center;
@@ -260,14 +303,36 @@
             </div>
         </div>
 
+        <form id="filterForm" class="filters" onsubmit="event.preventDefault(); loadStudentData();">
+            <label>Tìm theo tên
+                <input id="fQ" type="text" placeholder="vd: nguyen">
+            </label>
+            <label>Sắp xếp
+                <select id="fSort">
+                    <option value="desc">Tiền giảm dần</option>
+                    <option value="asc">Tiền tăng dần</option>
+                    <option value="name">Theo tên</option>
+                </select>
+            </label>
+            <label>Tiền từ
+                <input id="fMin" type="number" min="0" placeholder="min">
+            </label>
+            <label>Tiền đến
+                <input id="fMax" type="number" min="0" placeholder="max">
+            </label>
+            <label>Top N
+                <input id="fTop" type="number" min="1" step="1" placeholder="tất cả">
+            </label>
+        </form>
+
         <div class="table-responsive">
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 70px;">STT</th>
+                        <th style="width: 70px;">Hạng</th>
                         <th>Họ Và Tên Sinh Viên</th>
-                        <th style="width: 200px;">Số Tiền / Điểm Thưởng</th>
-                        <th style="width: 140px; text-align: center;">Trạng Thái</th>
+                        <th style="width: 170px;">Đã chi</th>
+                        <th style="width: 190px; text-align: right;">So với trung bình</th>
                     </tr>
                 </thead>
                 <tbody id="studentTableBody">
@@ -281,8 +346,34 @@
         </div>
 
         <div class="api-info-box">
+            <b>Thuật toán API:</b> Node-RED tính tổng, trung bình, trung vị, xếp hạng (đồng tiền thì đồng hạng),
+            lọc theo tên không dấu / khoảng tiền / top N, và tìm danh sách chuyển khoản <b>ít giao dịch nhất</b>
+            để mọi người chi bằng nhau (tham lam: người nợ nhiều nhất trả cho người được nhận nhiều nhất).<br>
             <b>Cơ chế hoạt động:</b> Trình duyệt gửi HTTP GET request đến <code>/api/tacke</code> cùng origin. Nginx tiếp nhận, đóng vai trò <b>Reverse Proxy</b> điều phối luồng tới container <code>nodered:1880/api/tacke</code> trên mạng bridge nội bộ Docker, kèm tiêu đề CORS tiêu chuẩn.
         </div>
+
+        <details style="margin-top: 1rem; cursor: pointer;" open>
+            <summary style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">
+                📊 Thống kê (trên toàn bộ danh sách)
+            </summary>
+            <div id="statsBox" class="stats" style="margin-top: 0.75rem;"></div>
+        </details>
+
+        <details style="margin-top: 1rem; cursor: pointer;" open>
+            <summary style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">
+                💸 Chuyển khoản để chia đều (số giao dịch tối thiểu theo thuật toán tham lam)
+            </summary>
+            <div class="table-responsive" style="margin-top: 0.75rem;">
+                <table>
+                    <thead>
+                        <tr><th style="width: 60px;">#</th><th>Người trả</th><th>Người nhận</th><th style="text-align: right;">Số tiền</th></tr>
+                    </thead>
+                    <tbody id="transferBody">
+                        <tr><td colspan="4" class="empty-state">Chưa có dữ liệu.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </details>
 
         <details style="margin-top: 1rem; cursor: pointer;">
             <summary style="font-size: 0.9rem; font-weight: 500; color: var(--text-muted);">
@@ -298,104 +389,123 @@
 </div>
 
 <script>
+    const fmtTien = v => new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 2 }).format(v || 0) + ' VNĐ';
+
+    // Ghép tham số lọc từ form thành query string: /api/tacke?sort=desc&q=...
+    function taoUrl() {
+        const params = new URLSearchParams();
+        const add = (key, id) => {
+            const v = document.getElementById(id).value.trim();
+            if (v !== '') params.set(key, v);
+        };
+        add('q', 'fQ');
+        add('sort', 'fSort');
+        add('min', 'fMin');
+        add('max', 'fMax');
+        add('top', 'fTop');
+        const qs = params.toString();
+        return '/api/tacke' + (qs ? '?' + qs : '');
+    }
+
+    function veThongKe(tk) {
+        const items = [
+            ['Số SV', tk.soluong],
+            ['Tổng chi', fmtTien(tk.tong)],
+            ['Trung bình', fmtTien(tk.trungbinh)],
+            ['Trung vị', fmtTien(tk.trungvi)],
+            ['Cao nhất', fmtTien(tk.caonhat)],
+            ['Thấp nhất', fmtTien(tk.thapnhat)]
+        ];
+        document.getElementById('statsBox').innerHTML = items.map(([label, value]) =>
+            `<div class="stat"><div class="label">${label}</div><div class="value">${escapeHtml(String(value))}</div></div>`
+        ).join('');
+    }
+
+    function veChuyenKhoan(ds) {
+        const body = document.getElementById('transferBody');
+        if (!ds.length) {
+            body.innerHTML = '<tr><td colspan="4" class="empty-state">Mọi người đã chi bằng nhau, không cần chuyển khoản.</td></tr>';
+            return;
+        }
+        body.innerHTML = ds.map((ck, i) => `
+            <tr>
+                <td>${i + 1}</td>
+                <td>${escapeHtml(ck.tu)}</td>
+                <td>${escapeHtml(ck.den)}</td>
+                <td style="text-align: right;"><span class="money-tag">${fmtTien(ck.sotien)}</span></td>
+            </tr>`).join('');
+    }
+
     async function loadStudentData() {
         const statusEl = document.getElementById('apiStatus');
         const tableBody = document.getElementById('studentTableBody');
         const rawJsonEl = document.getElementById('rawJsonResponse');
         const fetchBtn = document.getElementById('fetchBtn');
         const btnText = document.getElementById('btnText');
+        const url = taoUrl();
 
-        // Trạng thái đang tải
         fetchBtn.disabled = true;
         btnText.textContent = "Đang tải...";
         statusEl.className = "status-badge status-loading";
         statusEl.textContent = "Đang kết nối API...";
-
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="4" class="empty-state">
-                    Đang gửi yêu cầu tới <code>/api/tacke</code>...
-                </td>
-            </tr>
-        `;
+        tableBody.innerHTML = `<tr><td colspan="4" class="empty-state">Đang gửi yêu cầu tới <code>${escapeHtml(url)}</code>...</td></tr>`;
 
         try {
-            // Sử dụng Fetch API gọi tới endpoint /api/tacke
-            const response = await fetch('/api/tacke', {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json'
-                }
-            });
-
-            if (!response.ok) {
-                throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
-            }
-
+            // Gọi API trên Node-RED (cùng origin, Nginx reverse proxy /api/ -> nodered:1880)
+            const response = await fetch(url, { headers: { 'Accept': 'application/json' } });
             const data = await response.json();
-            rawJsonEl.textContent = JSON.stringify(data, null, 2);
+            rawJsonEl.textContent = `GET ${url}\n\n` + JSON.stringify(data, null, 2);
 
-            // Kiểm tra cấu trúc dữ liệu theo yêu cầu: { ok: 1, msg: "...", dssv: [...] }
-            if (data && Array.isArray(data.dssv)) {
-                if (data.dssv.length === 0) {
-                    tableBody.innerHTML = `
-                        <tr>
-                            <td colspan="4" class="empty-state">Danh sách sinh viên rỗng.</td>
-                        </tr>
-                    `;
-                } else {
-                    let rowsHtml = '';
-                    data.dssv.forEach((sv, index) => {
-                        const avatarLetter = (sv.name || '?').charAt(0).toUpperCase();
-                        const formattedMoney = new Intl.NumberFormat('vi-VN').format(sv.money || 0) + ' VNĐ';
-
-                        rowsHtml += `
-                            <tr>
-                                <td><strong>#${index + 1}</strong></td>
-                                <td>
-                                    <div class="student-name-col">
-                                        <div class="student-avatar">${avatarLetter}</div>
-                                        <div>
-                                            <div style="font-weight: 600;">${escapeHtml(sv.name || 'Không có tên')}</div>
-                                            <div style="font-size: 0.8rem; color: var(--text-muted);">Mã SV: SV${1000 + index}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td>
-                                    <span class="money-tag">${formattedMoney}</span>
-                                </td>
-                                <td style="text-align: center;">
-                                    <span style="color: var(--success); font-size: 0.85rem; font-weight: 600;">● Đã xác nhận</span>
-                                </td>
-                            </tr>
-                        `;
-                    });
-                    tableBody.innerHTML = rowsHtml;
-                }
-
-                statusEl.className = "status-badge status-success";
-                statusEl.textContent = `Thành công (${data.msg || 'OK'})`;
-            } else {
-                throw new Error('Dữ liệu trả về không đúng định dạng chứa mảng "dssv"');
+            if (!response.ok || data.ok !== 1) {
+                throw new Error(data.msg || `HTTP ${response.status}`);
+            }
+            if (!Array.isArray(data.dssv)) {
+                throw new Error('Dữ liệu trả về không có mảng "dssv"');
             }
 
+            if (data.dssv.length === 0) {
+                tableBody.innerHTML = '<tr><td colspan="4" class="empty-state">Không có sinh viên nào khớp bộ lọc.</td></tr>';
+            } else {
+                tableBody.innerHTML = data.dssv.map(sv => {
+                    const avatarLetter = escapeHtml((sv.name || '?').charAt(0).toUpperCase());
+                    const cl = Number(sv.chenhlech) || 0;
+                    const clText = cl > 0 ? `+${fmtTien(cl)} (được nhận)` : cl < 0 ? `${fmtTien(cl)} (đóng thêm)` : 'Bằng trung bình';
+                    return `
+                        <tr>
+                            <td><strong>#${sv.hang ?? ''}</strong></td>
+                            <td>
+                                <div class="student-name-col">
+                                    <div class="student-avatar">${avatarLetter}</div>
+                                    <div style="font-weight: 600;">${escapeHtml(sv.name || 'Không có tên')}</div>
+                                </div>
+                            </td>
+                            <td><span class="money-tag">${fmtTien(sv.money)}</span></td>
+                            <td style="text-align: right;" class="${cl > 0 ? 'pos' : cl < 0 ? 'neg' : ''}">${clText}</td>
+                        </tr>`;
+                }).join('');
+            }
+
+            if (data.thongke) veThongKe(data.thongke);
+            veChuyenKhoan(Array.isArray(data.chuyenkhoan) ? data.chuyenkhoan : []);
+
+            statusEl.className = "status-badge status-success";
+            statusEl.textContent = `Thành công (${data.msg || 'OK'})`;
         } catch (error) {
             console.error('Fetch error:', error);
             statusEl.className = "status-badge status-error";
-            statusEl.textContent = "Lỗi kết nối API";
-            rawJsonEl.textContent = JSON.stringify({ error: error.message }, null, 2);
-
+            statusEl.textContent = "Lỗi API";
+            if (!rawJsonEl.textContent.startsWith('GET')) {
+                rawJsonEl.textContent = JSON.stringify({ error: error.message }, null, 2);
+            }
             tableBody.innerHTML = `
                 <tr>
                     <td colspan="4" class="empty-state" style="color: var(--danger);">
-                        <p style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ Không thể tải dữ liệu từ <code>/api/tacke</code></p>
-                        <p style="font-size: 0.85rem; color: var(--text-muted);">${escapeHtml(error.message)}</p>
+                        <p style="font-weight: 600; margin-bottom: 0.5rem;">⚠️ ${escapeHtml(error.message)}</p>
                         <p style="font-size: 0.8rem; margin-top: 0.5rem; color: #475569;">
-                            Gợi ý: Kiểm tra xem container <code>nodered</code> đã khởi động và import file <code>nodered_flows.json</code> chưa.
+                            Nếu lỗi kết nối: kiểm tra container <code>nodered</code> đã chạy và đã import <code>nodered_flows.json</code>.
                         </p>
                     </td>
-                </tr>
-            `;
+                </tr>`;
         } finally {
             fetchBtn.disabled = false;
             btnText.textContent = "Tải Dữ Liệu";
@@ -409,10 +519,9 @@
         return div.innerHTML;
     }
 
-    // Tự động tải dữ liệu khi trang web sẵn sàng
-    window.addEventListener('DOMContentLoaded', () => {
-        loadStudentData();
-    });
+    // Đổi bộ lọc thì gọi lại API
+    document.getElementById('filterForm').addEventListener('change', loadStudentData);
+    window.addEventListener('DOMContentLoaded', loadStudentData);
 </script>
 
 </body>

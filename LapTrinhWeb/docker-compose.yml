@@ -6,8 +6,12 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+    environment:
+      # Lấy từ file .env; nginx:alpine tự thay vào nginx/templates/*.template
+      DOMAIN1: ${DOMAIN1:-web1.example.com}
+      DOMAIN2: ${DOMAIN2:-web2.example.com}
     volumes:
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/templates:/etc/nginx/templates:ro
       - ./web1:/usr/share/nginx/html/web1:ro
       - ./web2:/usr/share/nginx/html/web2:ro
     depends_on:
@@ -66,6 +70,9 @@ services:
     container_name: cloudflared_tunnel
     restart: unless-stopped
     command: "tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}"
+    # Trên Cloudflare: Public Hostname DOMAIN1 và DOMAIN2 đều trỏ tới http://nginx:80
+    depends_on:
+      - nginx
     networks:
       - web-net
 

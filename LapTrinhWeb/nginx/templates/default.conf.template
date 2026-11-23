@@ -1,10 +1,15 @@
+# File template: khi container nginx khởi động, image nginx:alpine tự thay
+# DOMAIN1 / DOMAIN2 (lấy từ file .env) rồi ghi ra /etc/nginx/conf.d/default.conf.
+# Chỉ các biến môi trường có khai báo mới bị thay, nên $host, $uri... giữ nguyên.
+#
 # ==============================================================================
-# CẤU HÌNH VIRTUAL HOST CHO SERVER 1 (domain1.local)
+# CẤU HÌNH VIRTUAL HOST CHO SERVER 1: domain thật DOMAIN1 (qua Cloudflare Tunnel)
+#                                     + domain1.local (test trên máy local)
 # Phục vụ Web 1 và Reverse Proxy API đến Node-RED kèm CORS
 # ==============================================================================
 server {
     listen 80;
-    server_name domain1.local www.domain1.local localhost;
+    server_name ${DOMAIN1} domain1.local localhost;
 
     # Thư mục chứa mã nguồn Web 1
     root /usr/share/nginx/html/web1;
@@ -66,12 +71,12 @@ server {
 }
 
 # ==============================================================================
-# CẤU HÌNH VIRTUAL HOST CHO SERVER 2 (domain2.local)
+# CẤU HÌNH VIRTUAL HOST CHO SERVER 2: domain thật DOMAIN2 + domain2.local
 # Phục vụ Web 2 (Landing Page chứng minh đa tên miền)
 # ==============================================================================
 server {
     listen 80;
-    server_name domain2.local www.domain2.local;
+    server_name ${DOMAIN2} domain2.local;
 
     # Thư mục chứa mã nguồn Web 2
     root /usr/share/nginx/html/web2;
