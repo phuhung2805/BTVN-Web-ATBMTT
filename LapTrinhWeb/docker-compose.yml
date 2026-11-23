@@ -8,8 +8,9 @@ services:
       - "80:80"
     environment:
       # Lấy từ file .env; nginx:alpine tự thay vào nginx/templates/*.template
-      DOMAIN1: ${DOMAIN1:-web1.example.com}
-      DOMAIN2: ${DOMAIN2:-web2.example.com}
+      # Mặc định *.localhost: trình duyệt tự trỏ về 127.0.0.1, không cần sửa file hosts
+      DOMAIN1: ${DOMAIN1:-web1.localhost}
+      DOMAIN2: ${DOMAIN2:-web2.localhost}
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ./web1:/usr/share/nginx/html/web1:ro
@@ -64,13 +65,41 @@ services:
     networks:
       - web-net
 
-  # 5. Dịch vụ Cloudflare Tunnel kết nối Internet công cộng an toàn
+  # 5. Cloudflare Tunnel đưa web ra Internet
+  # ---------------------------------------------------------------------------
+  # MẶC ĐỊNH (không cần domain, không cần tài khoản Cloudflare): "Quick Tunnel".
+  # Mỗi container nhận 1 địa chỉ ngẫu nhiên https://xxxx.trycloudflare.com.
+  # --http-host-header gắn Host = DOMAIN1/DOMAIN2 nên nginx vẫn chọn đúng website.
+  # Xem địa chỉ:  docker compose logs cloudflared cloudflared-web2 | grep trycloudflare
   cloudflared:
     image: cloudflare/cloudflared:latest
-    container_name: cloudflared_tunnel
+    container_name: cloudflared_web1
     restart: unless-stopped
-    command: "tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}"
-    # Trên Cloudflare: Public Hostname DOMAIN1 và DOMAIN2 đều trỏ tới http://nginx:80
+    command: "tunnel --no-autoupdate --url http://nginx:80 --http-host-header ${DOMAIN1:-web1.localhost}"
+    depends_on:
+      - nginx
+    networks:
+      - web-net
+
+  cloudflared-web2:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_web2
+    restart: unless-stopped
+    command: "tunnel --no-autoupdate --url http://nginx:80 --http-host-header ${DOMAIN2:-web2.localhost}"
+    depends_on:
+      - nginx
+    networks:
+      - web-net
+
+  # KHI CÓ DOMAIN THẬT: điền CLOUDFLARE_TUNNEL_TOKEN + DOMAIN1/DOMAIN2 trong .env rồi chạy
+  #   docker compose --profile domain-that up -d
+  # Trên Cloudflare: Public Hostname DOMAIN1 và DOMAIN2 đều trỏ tới http://nginx:80
+  cloudflared-named:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_named
+    restart: unless-stopped
+    profiles: ["domain-that"]
+    command: "tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN:-chua_dien_token}"
     depends_on:
       - nginx
     networks:

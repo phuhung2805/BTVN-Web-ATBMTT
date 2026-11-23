@@ -153,7 +153,7 @@
 
 <div class="container">
     <div class="hero">
-        <span class="badge-domain">🌐 SERVER VIRTUAL HOST 2: domain2.local</span>
+        <span class="badge-domain">🌐 SERVER VIRTUAL HOST 2: web2.localhost</span>
         <h1>Chào Mừng Đến Với Web 2</h1>
         <p>
             Trang Landing Page độc lập chứng minh Nginx phân biệt thành công nhiều tên miền khác nhau trên cùng một cổng 80 (Name-based Virtual Hosting).
@@ -167,8 +167,8 @@
                 Đây là website thứ hai được phục vụ bởi Nginx container. Mặc dù cả hai website đều lắng nghe trên cùng cổng <b>80</b> và chia sẻ chung một địa chỉ IP, Nginx đã định tuyến chuẩn xác dựa vào tiêu đề <code>Host</code> trong gói tin HTTP request.
             </p>
             <ul class="check-list">
-                <li><span class="icon">✓</span> <b>Web 1:</b> <code>domain1.local</code> &rarr; Quản lý sinh viên & Proxy API</li>
-                <li><span class="icon">✓</span> <b>Web 2:</b> <code>domain2.local</code> &rarr; Landing Page thông tin</li>
+                <li><span class="icon">✓</span> <b>Web 1:</b> <code>web1.localhost</code> &rarr; Quản lý sinh viên & Proxy API</li>
+                <li><span class="icon">✓</span> <b>Web 2:</b> <code>web2.localhost</code> &rarr; Landing Page thông tin</li>
                 <li><span class="icon">✓</span> <b>Bảo mật & Tách biệt:</b> Thư mục mã nguồn và access log riêng biệt</li>
             </ul>
         </div>
@@ -179,13 +179,13 @@
             <div class="code-box">
 server {
     listen 80;
-    server_name domain2.local;
+    server_name web2.localhost;
     root /usr/share/nginx/html/web2;
     index index.html;
 }
             </div>
             <p style="margin-top: 1rem; font-size: 0.85rem;">
-                👉 Khi truy vấn tới <code>http://domain2.local</code>, Nginx trả về tài nguyên trong <code>/web2</code> mà không bị xung đột với <code>/web1</code>.
+                👉 Khi truy vấn tới <code>http://web2.localhost</code>, Nginx trả về tài nguyên trong <code>/web2</code> mà không bị xung đột với <code>/web1</code>.
             </p>
         </div>
     </div>
@@ -193,16 +193,14 @@ server {
     <div class="card">
         <h2>🛠️ Hướng Dẫn Thử Nghiệm Domain Ảo</h2>
         <p>
-            Để kiểm tra tính năng Virtual Host trên máy cá nhân, thêm dòng sau vào file hosts:
+            Tên miền đuôi <code>.localhost</code> luôn trỏ về chính máy mình (RFC 6761), nên không cần mua domain hay sửa file hosts.
+            Muốn xem từ Internet thì dùng link <code>https://xxxx.trycloudflare.com</code> do container cloudflared tạo ra:
         </p>
         <div class="code-box">
-# Trên Windows: C:\Windows\System32\drivers\etc\hosts
-# Trên Linux/macOS: /etc/hosts
-127.0.0.1  domain1.local
-127.0.0.1  domain2.local
+docker compose logs cloudflared cloudflared-web2 | grep trycloudflare
         </div>
         <p style="margin-top: 0.75rem; font-size: 0.85rem;">
-            Sau đó truy cập trình duyệt tại <b>http://domain1.local</b> và <b>http://domain2.local</b> để kiểm chứng hai giao diện khác nhau hoàn toàn.
+            Trên máy local, truy cập trình duyệt tại <b>http://web1.localhost</b> và <b>http://web2.localhost</b> để kiểm chứng hai giao diện khác nhau hoàn toàn.
         </p>
     </div>
 

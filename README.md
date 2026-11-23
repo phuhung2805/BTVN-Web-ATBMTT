@@ -10,7 +10,7 @@ Dự án bao gồm trọn bộ mã nguồn, cấu hình hệ thống và tài li
 BTVN-Web-ATBMTT/
 ├── LapTrinhWeb/
 │   ├── docker-compose.yml          # 5 container: Nginx, Node-RED, MariaDB, phpMyAdmin, Cloudflared
-│   ├── .env.example                # Mẫu file .env: token Cloudflare Tunnel + 2 domain thật
+│   ├── .env.example                # Mẫu file .env (không bắt buộc): 2 domain + token Cloudflare
 │   ├── nodered_flows.json          # Flow Node-RED: http in -> function (thuật toán) -> http response
 │   ├── nodered/
 │   │   ├── api_tacke.js            # Mã nguồn thuật toán API (bản dễ đọc của function node)
@@ -35,10 +35,10 @@ BTVN-Web-ATBMTT/
 
 | Đề bài | Đã làm | Ở đâu |
 |---|---|---|
-| **BT1.1** Giả lập Linux (Hyper-V / VirtualBox / VMware / WSL) | Ubuntu 24.04 trên WSL2 (hoặc máy ảo VirtualBox) | [Bước 1](#bước-1-giả-lập-linux) |
+| **BT1.1** Giả lập Linux (Hyper-V / VirtualBox / VMware / WSL) | Ubuntu 24.04 trên WSL2 (hoặc máy ảo VMware/VirtualBox) | [Bước 1](#bước-1-giả-lập-linux) |
 | **BT1.2** Cài docker compose trên Linux đó | Docker Engine + plugin `docker compose` | [Bước 2](#bước-2-cài-docker-và-docker-compose-trên-ubuntu) |
-| **BT1.3** nginx, nodered, mariadb, phpmyadmin, cloudflared (domain thật) | 5 service trong `docker-compose.yml`, Cloudflare Tunnel với domain thật | [Bước 3](#bước-3-chạy-5-dịch-vụ-bằng-docker-compose), [Bước 4](#bước-4-cloudflare-tunnel-với-domain-thật) |
-| **BT1.4** Nginx chạy 2 website với 2 domain khác nhau | 2 `server` block: `DOMAIN1` → `web1/`, `DOMAIN2` → `web2/` | `nginx/templates/default.conf.template` |
+| **BT1.3** nginx, nodered, mariadb, phpmyadmin, cloudflared | Đủ 5 dịch vụ trong `docker-compose.yml`. Cloudflared mặc định dùng Quick Tunnel (không cần domain), có sẵn chế độ domain thật | [Bước 3](#bước-3-chạy-5-dịch-vụ-bằng-docker-compose), [Bước 4](#bước-4-đưa-web-ra-internet-bằng-cloudflared) |
+| **BT1.4** Nginx chạy 2 website với 2 domain khác nhau | 2 `server` block: `web1.localhost` → `web1/`, `web2.localhost` → `web2/` (đổi được sang domain thật) | `nginx/templates/default.conf.template` |
 | **BT2.1** Node-RED: http in + http response tạo API | `GET`/`POST /api/tacke` → function → http response | `nodered_flows.json` |
 | **BT2.2** Nginx cho web gọi được API, thuật toán tự nghĩ | `location /api/` proxy tới `nodered:1880`; thuật toán chia tiền + chuyển khoản tối thiểu | [Bài tập 2](#bài-tập-2-api-apitacke) |
 | **BT2.3** Code JS trong HTML gọi API | `fetch('/api/tacke?...')` trong `web1/index.html` | `web1/index.html` |
@@ -47,20 +47,29 @@ BTVN-Web-ATBMTT/
 
 ### Bước 1: Giả lập Linux
 
-**Cách A, WSL2 (khuyên dùng trên Windows 10/11).** Mở PowerShell bằng quyền Administrator:
+**Cách A, WSL2 (khuyên dùng trên Windows 10/11).** WSL2 cần tính năng *Virtual Machine Platform* của Windows và ảo hóa (VT-x) bật trong BIOS. Mở PowerShell bằng quyền **Administrator**:
+
+```powershell
+dism.exe /online /enable-feature /featurename:VirtualMachinePlatform /all /norestart
+dism.exe /online /enable-feature /featurename:Microsoft-Windows-Subsystem-Linux /all /norestart
+```
+
+Khởi động lại máy, rồi cài Ubuntu (bỏ qua nếu đã có):
 
 ```powershell
 wsl --install -d Ubuntu-24.04
 ```
 
-Khởi động lại máy, mở **Ubuntu** từ Start Menu và tạo user/mật khẩu. Kiểm tra:
+Mở **Ubuntu** từ Start Menu và tạo user/mật khẩu. Kiểm tra:
 
 ```bash
-wsl -l -v          # (chạy trong PowerShell) phải thấy Ubuntu-24.04, VERSION 2
+wsl -l -v          # (chạy trong PowerShell) phải thấy Ubuntu, VERSION 2, chạy được không báo lỗi
 lsb_release -a     # (chạy trong Ubuntu) Ubuntu 24.04 LTS
 ```
 
-**Cách B, VirtualBox / VMware / Hyper-V:** tạo máy ảo 2 CPU, 4 GB RAM, 25 GB ổ, cài từ file ISO Ubuntu Server 24.04. Card mạng để chế độ *Bridged* (hoặc NAT và forward cổng 80, 1880, 8080) để máy thật truy cập được.
+> Nếu `wsl` báo `HCS_E_SERVICE_NOT_AVAILABLE` / *a required feature is not installed* nghĩa là chưa bật *Virtual Machine Platform*. Chạy 2 lệnh `dism` ở trên rồi khởi động lại.
+
+**Cách B, VMware / VirtualBox / Hyper-V:** tạo máy ảo 2 CPU, 4 GB RAM, 25 GB ổ, cài từ file ISO Ubuntu Server 24.04. Card mạng để chế độ *Bridged* (hoặc NAT và forward cổng 80, 1880, 8080) để máy thật truy cập được.
 
 ### Bước 2: Cài Docker và docker compose trên Ubuntu
 
@@ -84,58 +93,56 @@ docker compose version
 ```bash
 git clone https://github.com/phuhung2805/BTVN-Web-ATBMTT.git
 cd BTVN-Web-ATBMTT/LapTrinhWeb
-cp .env.example .env
-nano .env               # điền CLOUDFLARE_TUNNEL_TOKEN, DOMAIN1, DOMAIN2 (Bước 4)
-docker compose up -d
-docker compose ps       # 5 container đều phải ở trạng thái "running"
+docker compose up -d    # không cần file .env, mặc định dùng web1.localhost / web2.localhost
+docker compose ps       # nginx, nodered, mariadb, phpmyadmin, cloudflared, cloudflared-web2 đều "running"
 ```
 
 | Dịch vụ | Địa chỉ |
 |---|---|
-| Web 1 (gọi API) | `https://DOMAIN1`, hoặc `http://domain1.local` / `http://localhost` |
-| Web 2 (landing page) | `https://DOMAIN2`, hoặc `http://domain2.local` |
+| Web 1 (gọi API) | `http://web1.localhost` (hoặc `http://localhost`) |
+| Web 2 (landing page) | `http://web2.localhost` |
 | Node-RED | `http://localhost:1880` |
 | phpMyAdmin | `http://localhost:8080` (root / `root_password_123`) |
 
+**Vì sao không cần mua domain, không cần sửa file hosts?** Mọi tên miền đuôi `.localhost` được chuẩn hóa (RFC 6761) để luôn trỏ về chính máy mình. Chrome, Edge, Firefox tự hiểu `web1.localhost`, `web2.localhost` là `127.0.0.1`. Nginx thấy 2 header `Host` khác nhau nên trả về 2 website khác nhau, đúng yêu cầu BT1.4.
+
 **Import flow Node-RED:** mở `http://localhost:1880` → menu ☰ → **Import** → chọn `LapTrinhWeb/nodered_flows.json` → **Import** → **Deploy**.
 
-**Test 2 domain trên máy local (không cần Internet):** thêm vào file hosts
-(`C:\Windows\System32\drivers\etc\hosts` hoặc `/etc/hosts`):
-
-```text
-127.0.0.1   domain1.local
-127.0.0.1   domain2.local
-```
-
-Hoặc test bằng header `Host`:
+**Kiểm tra bằng dòng lệnh:**
 
 ```bash
-curl -H "Host: domain1.local" http://localhost/          # trả về Web 1
-curl -H "Host: domain2.local" http://localhost/          # trả về Web 2
-curl http://localhost/api/tacke                          # JSON từ Node-RED qua Nginx
+curl -H "Host: web1.localhost" http://localhost/        # trả về Web 1
+curl -H "Host: web2.localhost" http://localhost/        # trả về Web 2
+curl http://localhost/api/tacke                         # JSON {"ok":1,...} từ Node-RED qua Nginx
 ```
 
-### Bước 4: Cloudflare Tunnel với domain thật
+### Bước 4: Đưa web ra Internet bằng cloudflared
 
-1. Có 1 domain (mua ở bất kỳ nhà đăng ký nào) và đã chuyển nameserver về **Cloudflare** (Add a site).
-2. Vào **Cloudflare Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared**, đặt tên, copy **token** vào `CLOUDFLARE_TUNNEL_TOKEN` trong `.env`.
-3. Trong tab **Public Hostname** của tunnel, thêm 2 dòng:
+**Cách A, Quick Tunnel (mặc định, không cần domain, không cần tài khoản).** Hai container `cloudflared` và `cloudflared-web2` tự tạo 2 địa chỉ public ngẫu nhiên dạng `https://xxxx.trycloudflare.com`:
 
-   | Subdomain | Domain | Service |
-   |---|---|---|
-   | `web1` | `tenmiencuaban.com` | `HTTP` → `nginx:80` |
-   | `web2` | `tenmiencuaban.com` | `HTTP` → `nginx:80` |
+```bash
+docker compose logs cloudflared cloudflared-web2 | grep -o 'https://[a-z0-9-]*\.trycloudflare\.com'
+```
 
-4. Đặt trong `.env`: `DOMAIN1=web1.tenmiencuaban.com`, `DOMAIN2=web2.tenmiencuaban.com`, rồi chạy `docker compose up -d`.
-5. Cả 2 hostname đều vào cùng container nginx. Nginx dựa vào header `Host` để chọn `web1/` hoặc `web2/`, đó chính là yêu cầu BT1.4.
+Địa chỉ thứ nhất mở ra Web 1, thứ hai mở ra Web 2 (cloudflared gắn header `Host` = `DOMAIN1`/`DOMAIN2` để nginx chọn đúng website). Gửi 2 link này cho thầy là xem được từ bất kỳ đâu. Mỗi lần khởi động lại container thì link đổi.
 
-Kiểm tra tunnel: `docker compose logs cloudflared` phải có dòng `Registered tunnel connection`.
+**Cách B, domain thật (nếu có).**
+
+1. Thêm domain vào **Cloudflare** (Add a site) và chuyển nameserver về Cloudflare.
+2. Vào **Cloudflare Zero Trust → Networks → Tunnels → Create a tunnel → Cloudflared**, copy **token**.
+3. Trong tab **Public Hostname** của tunnel, thêm 2 dòng `web1.tenmiencuaban.com` và `web2.tenmiencuaban.com`, cả hai là `HTTP` → `nginx:80`.
+4. Tạo file `.env` (`cp .env.example .env`), điền `CLOUDFLARE_TUNNEL_TOKEN`, `DOMAIN1=web1.tenmiencuaban.com`, `DOMAIN2=web2.tenmiencuaban.com`, rồi chạy:
+
+```bash
+docker compose --profile domain-that up -d
+docker compose logs cloudflared-named      # phải có "Registered tunnel connection"
+```
 
 ---
 
 ### Bài tập 2: API `/api/tacke`
 
-**Luồng:** Trình duyệt → `https://DOMAIN1/api/tacke` → Nginx (`location /api/`) → `http://nodered:1880/api/tacke` → node **http in** → node **function** (thuật toán) → node **http response**.
+**Luồng:** Trình duyệt → `http://web1.localhost/api/tacke` → Nginx (`location /api/`) → `http://nodered:1880/api/tacke` → node **http in** → node **function** (thuật toán) → node **http response**.
 
 **Thuật toán "tách kè" (chia tiền quỹ lớp)**, mã nguồn ở `nodered/api_tacke.js`:
 
@@ -196,9 +203,9 @@ Lưu ảnh vào `LapTrinhWeb/docs/images/` với đúng tên dưới đây để
 | 1 | `wsl -l -v` + `lsb_release -a` (hoặc màn hình máy ảo Ubuntu) | ![](LapTrinhWeb/docs/images/01-linux.png) |
 | 2 | `docker --version` + `docker compose version` | ![](LapTrinhWeb/docs/images/02-docker.png) |
 | 3 | `docker compose ps`: 5 container đang chạy | ![](LapTrinhWeb/docs/images/03-compose-ps.png) |
-| 4 | Cloudflare Tunnel *Healthy* + 2 Public Hostname | ![](LapTrinhWeb/docs/images/04-cloudflare.png) |
-| 5 | Trình duyệt mở `https://DOMAIN1` (Web 1 có dữ liệu API) | ![](LapTrinhWeb/docs/images/05-web1.png) |
-| 6 | Trình duyệt mở `https://DOMAIN2` (Web 2) | ![](LapTrinhWeb/docs/images/06-web2.png) |
+| 4 | `docker compose logs` hiện 2 link trycloudflare (hoặc Tunnel *Healthy* nếu dùng domain thật) | ![](LapTrinhWeb/docs/images/04-cloudflare.png) |
+| 5 | Trình duyệt mở `http://web1.localhost` / link trycloudflare 1 (Web 1 có dữ liệu API) | ![](LapTrinhWeb/docs/images/05-web1.png) |
+| 6 | Trình duyệt mở `http://web2.localhost` / link trycloudflare 2 (Web 2) | ![](LapTrinhWeb/docs/images/06-web2.png) |
 | 7 | Flow Node-RED (http in → function → http response) | ![](LapTrinhWeb/docs/images/07-nodered.png) |
 | 8 | phpMyAdmin đăng nhập vào MariaDB | ![](LapTrinhWeb/docs/images/08-phpmyadmin.png) |
 
